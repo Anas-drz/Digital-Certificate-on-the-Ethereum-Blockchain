@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="page d'accueil.png" alt="Page d'accueil de l'application" width="800">
+  <img src="paged'accueil.png" alt="Page d'accueil de l'application" width="800">
 </p>
 # Digital Certificate on the Ethereum Blockchain
 
