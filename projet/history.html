@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Historique des certificats</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <script src="contract.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <h1>Historique des certificats émis</h1>
+  <button onclick="goBack()">Retour au Directeur</button>
+  <button onclick="goHome()">Retour à l'accueil</button>
+  <div id="list"></div>
+</div>
+
+<script>
+function goBack(){ window.location.href = 'directeur.html'; }
+function goHome(){ window.location.href = 'index.html'; }
+
+const listEl = document.getElementById('list');
+
+async function init() {
+  // Vérifier MetaMask et compte
+  if (!window.ethereum) {
+    listEl.innerHTML = '<p>MetaMask requis pour accéder à cet historique.</p>';
+    return;
+  }
+
+  try {
+    const acc = await ethereum.request({ method: 'eth_requestAccounts' });
+    const account = acc[0].toLowerCase();
+    const web3 = new Web3(window.ethereum);
+    const c = new web3.eth.Contract(abi, contractAddress);
+    
+    let director;
+    try {
+      director = (await c.methods.directeur().call()).toLowerCase();
+    } catch (e) {
+      console.error('Erreur lecture directeur:', e);
+      listEl.innerHTML = '<p>Erreur connexion au contrat.</p>';
+      return;
+    }
+
+    console.log('Account:', account, 'Director:', director);
+    
+    if (account !== director) {
+      alert('❌ Accès refusé. Seul le directeur peut voir l\'historique.');
+      setTimeout(() => window.location.href = 'directeur.html', 500);
+      return;
+    }
+
+    // Récupérer et afficher l'historique
+    const hist = JSON.parse(localStorage.getItem('cert_history') || '[]');
+    console.log('Historique:', hist);
+    
+    if (!hist || hist.length === 0) {
+      listEl.innerHTML = '<p>Aucun certificat trouvé.</p>';
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'hist-table';
+    const header = document.createElement('thead');
+    header.innerHTML = '<tr><th>Hash</th><th>Nom étudiant</th><th>Adresse étudiant</th><th>Émetteur</th><th>Date</th><th>Statut</th></tr>';
+    table.appendChild(header);
+
+    const body = document.createElement('tbody');
+    for (const e of hist.slice().reverse()) {
+      const tr = document.createElement('tr');
+      let statut = 'Non signé';
+      try {
+        const result = await c.methods.getEtatCertificat(e.hash).call();
+        const signedDirector = result[0];
+        const signedPresident = result[1];
+        console.log('Hash:', e.hash, 'Directeur:', signedDirector, 'Président:', signedPresident);
+        if (signedDirector && signedPresident) {
+          statut = '✅ Signé (Directeur + Président)';
+        } else if (signedDirector) {
+          statut = '✍️ Signé par le Directeur';
+        } else if (signedPresident) {
+          statut = '✍️ Signé par le Président';
+        }
+      } catch (err) {
+        console.error('Erreur statut pour', e.hash, ':', err);
+      }
+      tr.innerHTML = `<td>${e.hash}</td><td>${e.studentName}</td><td>${e.studentAddress}</td><td>${e.issuer}</td><td>${new Date(e.timestamp).toLocaleString()}</td><td>${statut}</td>`;
+      body.appendChild(tr);
+    }
+    table.appendChild(body);
+    listEl.appendChild(table);
+
+  } catch (err) {
+    console.error('Erreur init:', err);
+    listEl.innerHTML = '<p>Erreur: ' + err.message + '</p>';
+  }
+}
+
+init();
+</script>
+
+</body>
+</html>

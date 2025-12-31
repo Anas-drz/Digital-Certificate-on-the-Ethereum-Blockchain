@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Étudiant</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+<script src="contract.js"></script>
+</head>
+<body>
+
+<div class="container">
+<h1>Diplôme Étudiant</h1>
+
+<button onclick="connect()">Connecter MetaMask</button>
+<p id="compte"></p>
+
+<input id="hash" placeholder="Hash du diplôme">
+<button onclick="verifier()">Vérifier</button>
+<button onclick="goHome()">Retour à l'accueil</button>
+
+<p id="etat"></p>
+
+<button id="printBtn" onclick="window.print()" style="display:none">
+🖨️ Imprimer le diplôme
+</button>
+</div>
+
+<!-- DIPLÔME OFFICIEL POUR IMPRESSION -->
+<div id="diploma" class="diploma-container" style="display:none">
+  <div class="diploma">
+    <!-- BORDURE DECORATIVE -->
+    <div class="diploma-border"></div>
+
+    <!-- EN-TÊTE AVEC LOGOS -->
+    <div class="diploma-top">
+      <div class="diploma-logo-left">
+        <img src="logo.png" alt="Logo ENIAD">
+      </div>
+      <div class="diploma-center-header">
+        <h1 class="diploma-main-title">ATTESTATION DE DIPLÔME</h1>
+        <p class="diploma-subtitle">École Nationale de L'intelligence Artificielle et du Digital</p>
+        <p class="diploma-subtitle-small">Spécialité : Ingénierie Réseaux et Sécurité Informatique</p>
+      </div>
+      <div class="diploma-logo-right">
+        <img src="شعار_وزارة_التربية_الوطنية_والتعليم_الأولي_والرياضة.png" alt="Logo Ministère">
+      </div>
+    </div>
+
+    <!-- CORPS DU DIPLÔME -->
+    <div class="diploma-body">
+      <div class="diploma-reference">
+        <p>N° <span id="diplomaNumber">----</span> / ENIAD / 2025</p>
+        <p style="margin-top: 5px;"><strong>Diplôme reconnu par le Ministère de l'Éducation</strong></p>
+      </div>
+
+      <div class="diploma-declaration">
+        <p class="diploma-intro">
+          Le Directeur de l'École Nationale de L'intelligence Artificielle et du Digital, atteste que :
+        </p>
+
+        <p class="diploma-student-name" id="studentName">
+          0x34953D90...98411ED7
+        </p>
+
+        <p class="diploma-text">
+          Numéro Étudiant : <span id="studentNumber">----</span>
+        </p>
+
+        <p class="diploma-text">
+          Dûment inscrit(e) à l'École Nationale de L'intelligence Artificielle et du Digital, a suivi régulièrement les cours du cursus de formation en <strong>Ingénierie Réseaux et Sécurité Informatique</strong> et a réussi avec succès tous les examens requis.
+        </p>
+
+        <p class="diploma-text">
+          En conséquence, il/elle a obtenu le <strong>Diplôme d'Ingénieur d'état</strong> <br>
+          <span style="color: #8b7355; font-weight: 600;">Spécialité : Ingénierie Réseaux et Sécurité Informatique</span>
+        </p>
+
+        <p class="diploma-text">
+          En foi de quoi, la présente attestation de diplôme lui est délivrée pour servir et valoir ce que de droit.
+        </p>
+
+        <p class="diploma-date">
+          Fait à Berkane, le <span id="dateValue">--/--/----</span>
+        </p>
+      </div>
+
+      <!-- SIGNATURES -->
+      <div class="diploma-signatures">
+        <div class="signature-box">
+          <img src="signature-40132.png" alt="Signature Directeur" class="signature-img" />
+          <p class="signature-line">___________________</p>
+          <p class="signature-name">Le Directeur</p>
+          <p class="signature-school">ENIAD</p>
+        </div>
+
+        <div class="signature-box">
+          <img src="signature-40138.png" alt="Signature Président" class="signature-img" />
+          <p class="signature-line">____________________</p>
+          <p class="signature-name">Le Président</p>
+          <p class="signature-school">Université Mohamed Premier</p>
+        </div>
+
+        <div class="signature-box">
+          <p style="font-size: 0.8rem; color: #666; word-break: break-all;">
+            <strong>Hash Blockchain:</strong><br>
+            <span id="diplomaHash" class="hash-mono">----</span>
+          </p>
+          <img src="qr-code.png" alt="QR Code" class="qr-img" />
+        </div>
+      </div>
+    </div>
+
+    <!-- PIED DE PAGE -->
+    <div class="diploma-footer">
+      <p>École Nationale de L'intelligence Artificielle et du Digital • Berkane, Maroc • Certifiée ISO 9001:2015</p>
+    </div>
+  </div>
+</div>
+
+<script>
+let web3, contract, account;
+
+async function connect() {
+  web3 = new Web3(window.ethereum);
+  const acc = await ethereum.request({ method: "eth_requestAccounts" });
+  account = acc[0];
+  document.getElementById("compte").innerText = account;
+  contract = new web3.eth.Contract(abi, contractAddress);
+}
+
+async function verifier() {
+  const hash = document.getElementById("hash").value;
+
+  const acces = await contract.methods.verifierAccesEtudiant(hash)
+    .call({ from: account });
+
+  if (!acces) {
+    alert("❌ Ce diplôme ne vous appartient pas");
+    return;
+  }
+
+  const etat = await contract.methods.getEtatCertificat(hash).call();
+  document.getElementById("printBtn").style.display = "none";
+  document.getElementById("diploma").style.display = "none";
+
+  if (!etat[0] && !etat[1]) {
+    document.getElementById("etat").innerText = "⏳ En attente des deux signatures";
+  } else if (etat[0] && !etat[1]) {
+    document.getElementById("etat").innerText = "⏳ En attente du président";
+  } else if (!etat[0] && etat[1]) {
+    document.getElementById("etat").innerText = "⏳ En attente du directeur";
+  } else {
+    document.getElementById("etat").innerText = "✅ Diplôme valide";
+    document.getElementById("printBtn").style.display = "block";
+    showDiploma(hash);
+  }
+}
+
+function showDiploma(hash) {
+  document.getElementById("diploma").style.display = "block";
+  const date = new Date();
+  const formattedDate = date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear();
+  
+  // Afficher le hash complet
+  document.getElementById("diplomaHash").innerText = hash;
+  document.getElementById("dateValue").innerText = formattedDate;
+  document.getElementById("diplomaNumber").innerText = "ENIAD-21721000 / ENIAD / 2025";
+  
+  // Récupérer le nom de l'étudiant du localStorage
+  const studentName = localStorage.getItem("diploma_" + hash);
+  
+  if (studentName) {
+    document.getElementById("studentName").innerText = studentName;
+  } else {
+    document.getElementById("studentName").innerText = "Nom non disponible";
+  }
+  
+  // Afficher l'adresse comme numéro étudiant dans le corps
+  document.getElementById("studentNumber").innerText = account;
+}
+
+function goHome() {
+  window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>

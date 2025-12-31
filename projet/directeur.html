@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Directeur</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+<script src="contract.js"></script>
+</head>
+<body>
+
+<div class="container">
+<h1>Interface Directeur</h1>
+
+<button onclick="connect()">Connecter MetaMask</button>
+<p id="compte"></p>
+
+<input id="studentName" placeholder="Nom complet de l'étudiant">
+<input id="hash" placeholder="Hash du certificat">
+<input id="etudiant" placeholder="Adresse MetaMask de l'étudiant">
+<button onclick="creer()">Créer certificat</button>
+<button onclick="signer()">Signer Directeur</button>
+<button onclick="openHistory()">Voir historique des certificats</button>
+<button onclick="goHome()">Retour à l'accueil</button>
+</div>
+
+<script>
+let web3, contract, account;
+
+async function connect() {
+  web3 = new Web3(window.ethereum);
+  const acc = await ethereum.request({ method: "eth_requestAccounts" });
+  account = acc[0];
+  document.getElementById("compte").innerText = account;
+  contract = new web3.eth.Contract(abi, contractAddress);
+
+  const d = await contract.methods.directeur().call();
+  if (account.toLowerCase() !== d.toLowerCase()) {
+    alert("❌ Vous n'êtes pas le directeur");
+  }
+}
+
+async function creer() {
+  const studentName = document.getElementById("studentName").value;
+  const hash = document.getElementById("hash").value;
+  const studentAddress = document.getElementById("etudiant").value;
+  
+  if (!studentName.trim()) {
+    alert("❌ Veuillez entrer le nom complet de l'étudiant");
+    return;
+  }
+  
+  await contract.methods.creerCertificat(hash, studentAddress).send({ from: account });
+  
+  // Sauvegarder le nom de l'étudiant associé au hash
+  localStorage.setItem("diploma_" + hash, studentName);
+  // Ajouter l'entrée dans l'historique des certificats
+  try {
+    const entry = {
+      hash,
+      studentName,
+      studentAddress,
+      issuer: account,
+      timestamp: new Date().toISOString()
+    };
+    const hist = JSON.parse(localStorage.getItem('cert_history') || '[]');
+    hist.push(entry);
+    localStorage.setItem('cert_history', JSON.stringify(hist));
+  } catch (e) {
+    console.error('Erreur stockage historique', e);
+  }
+  alert("✅ Certificat créé et nom sauvegardé");
+}
+
+async function signer() {
+  await contract.methods.signerParDirecteur(
+    document.getElementById("hash").value
+  ).send({ from: account });
+}
+
+function openHistory() {
+  window.location.href = "history.html";
+}
+
+function goHome() {
+  window.location.href = "index.html";
+}
+</script>
+
+</body>
+</html>
