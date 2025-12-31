@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="page d'accueil.png" alt="Page d'accueil de l'application" width="800">
+</p>
 # Digital Certificate on the Ethereum Blockchain
 
 Ce projet est une application web décentralisée permettant la **gestion et la vérification de certificats numériques** à l’aide de la blockchain Ethereum.  
